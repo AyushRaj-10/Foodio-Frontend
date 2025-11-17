@@ -14,29 +14,28 @@ import {
 import GlassCard from "./GlassCard";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../Context/AppContext";
+import FoodioMap from "./FoodMap";
 
 const Navbar = () => {
   const { user, logout } = useContext(AppContext);
   const navigate = useNavigate();
 
-  // State management
+  // States
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(3);
   const [notificationCount, setNotificationCount] = useState(2);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMapOpen, setIsMapOpen] = useState(false);
 
-  // Scroll handler with throttling
+  // Scroll handler
   const handleScroll = useCallback(() => {
     const scrolled = window.scrollY > 20;
-    if (scrolled !== isScrolled) {
-      setIsScrolled(scrolled);
-    }
+    if (scrolled !== isScrolled) setIsScrolled(scrolled);
   }, [isScrolled]);
 
   useEffect(() => {
     let ticking = false;
-    console.log(user);
     const throttledScroll = () => {
       if (!ticking) {
         requestAnimationFrame(() => {
@@ -46,12 +45,11 @@ const Navbar = () => {
         ticking = true;
       }
     };
-
     window.addEventListener("scroll", throttledScroll);
     return () => window.removeEventListener("scroll", throttledScroll);
   }, [handleScroll]);
 
-  // Close mobile menu when clicking outside
+  // Click outside to close mobile menu
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (isMobileMenuOpen && !event.target.closest(".mobile-menu-container")) {
@@ -63,27 +61,18 @@ const Navbar = () => {
     return () => document.removeEventListener("click", handleClickOutside);
   }, [isMobileMenuOpen]);
 
-  // Navigation items
+  // FINAL CLEAN NAV ITEMS
   const navItems = [
     { label: "Home", onClick: () => navigate("/") },
     { label: "Menu", onClick: () => navigate("/menu") },
     { label: "Offers", onClick: () => navigate("/offer"), badge: "New" },
-    { label: "Track Order", onClick: () => navigate("/track") },
-    { label: "Profile", onClick: () => navigate("/profile") },
+    { label: "Track Order", onClick: () => setIsMapOpen(true) },
   ];
 
-  // Animation variants
+  // Animations
   const mobileMenuVariants = {
-    closed: {
-      opacity: 0,
-      height: 0,
-      transition: { duration: 0.3, ease: "easeInOut" },
-    },
-    open: {
-      opacity: 1,
-      height: "auto",
-      transition: { duration: 0.3, ease: "easeInOut" },
-    },
+    closed: { opacity: 0, height: 0 },
+    open: { opacity: 1, height: "auto" },
   };
 
   const searchVariants = {
@@ -93,170 +82,99 @@ const Navbar = () => {
 
   return (
     <>
+      {/* NAVBAR */}
       <motion.nav
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        transition={{ duration: 0.6 }}
+        className={`fixed top-0 left-0 right-0 z-50 ${
           isScrolled ? "py-2" : "py-4"
-        }`}
+        } transition-all`}
       >
         <div className="mx-auto max-w-7xl px-4">
           <GlassCard
-            className={`px-6 py-4 transition-all duration-500 ${
+            className={`px-6 py-4 transition-all ${
               isScrolled
                 ? "bg-white/25 backdrop-blur-3xl shadow-3xl"
                 : "bg-white/10"
             }`}
-            variant={isScrolled ? "elevated" : "default"}
             hover={false}
           >
             <div className="flex justify-between items-center">
+
               {/* Logo */}
               <motion.div
                 className="flex items-center gap-3 cursor-pointer group"
                 whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate("/")}
               >
                 <div className="relative">
-                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-red-500 via-orange-500 to-yellow-500 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300">
-                    <img src="/LogoFoodio.png" alt="logo" />
+                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-red-500 via-orange-500 to-yellow-500 flex items-center justify-center shadow-lg">
+                    <img src="/LogoFoodio.png" alt="Foodio Logo" />
                   </div>
-                  <div className="absolute -inset-1 bg-gradient-to-br from-red-500 via-orange-500 to-yellow-500 rounded-2xl opacity-0 group-hover:opacity-20 blur transition-all duration-300" />
                 </div>
-                <span className="text-3xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-red-600 via-orange-600 to-yellow-600">
+                <span className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-red-600 via-orange-600 to-yellow-600">
                   Foodio
                 </span>
               </motion.div>
 
+             
+
+
               {/* Desktop Navigation */}
               <div className="hidden lg:flex items-center gap-8">
                 {navItems.map((item, index) => (
-                  <motion.div
-                    key={item.label}
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="relative"
+                  <motion.button
+                    key={index}
+                    whileHover={{ scale: 1.05 }}
+                    className="relative text-gray-800 hover:text-red-600 transition"
+                    onClick={item.onClick}
                   >
-                    <button
-                      onClick={item.onClick}
-                      className={`font-medium transition-all duration-300 hover:scale-105 relative ${
-                        item.active
-                          ? "text-red-600"
-                          : "text-gray-800 hover:text-red-600"
-                      }`}
-                    >
-                      {item.label}
-                      {item.badge && (
-                        <span className="absolute -top-2 -right-6 px-2 py-0.5 text-xs bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full">
-                          {item.badge}
-                        </span>
-                      )}
-                      {item.active && (
-                        <motion.div
-                          layoutId="activeNav"
-                          className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-red-500 to-orange-500 rounded-full"
-                        />
-                      )}
-                    </button>
-                  </motion.div>
+                    {item.label}
+                    {item.badge && (
+                      <span className="absolute -top-2 -right-6 text-xs bg-gradient-to-r from-red-500 to-orange-500 text-white px-2 py-0.5 rounded-full">
+                        {item.badge}
+                      </span>
+                    )}
+                  </motion.button>
                 ))}
               </div>
 
               {/* Action Buttons */}
               <div className="flex items-center gap-3">
-                {/* Search Toggle */}
+
+                {/* Search */}
                 <motion.button
                   whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setIsSearchOpen(!isSearchOpen)}
-                  className="hidden md:flex p-3 rounded-2xl hover:bg-white/20 transition-all duration-300 relative"
+                  onClick={() => setIsSearchOpen(true)}
+                  className="hidden md:flex p-3 rounded-2xl hover:bg-white/20"
                 >
-                  <Search className="h-5 w-5 text-gray-800" />
+                  <Search className="h-5 w-5" />
                 </motion.button>
-
-                {/* Location */}
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="hidden md:flex items-center gap-2 px-3 py-2 rounded-2xl hover:bg-white/20 transition-all duration-300"
-                  onClick={() => {
-                    navigate("/address");
-                  }}
-                >
-                  <MapPin className="h-4 w-4 text-red-500" />
-                  <span className="text-sm font-medium text-gray-800">
-                    Delhi
-                  </span>
-                </motion.button>
-
-                {/* Notifications */}
-                {/* <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="hidden md:flex relative p-3 rounded-2xl hover:bg-white/20 transition-all duration-300"
-                >
-                  <Bell className="h-5 w-5 text-gray-800" />
-                  {user && notificationCount > 0 && (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold"
-                    >
-                      {notificationCount}
-                    </motion.span>
-                  )}
-                </motion.button> */}
-
-                {/* Wishlist
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="hidden md:flex relative p-3 rounded-2xl hover:bg-white/20 transition-all duration-300"
-                >
-                  <Heart className="h-5 w-5 text-gray-800" />
-                </motion.button> */}
 
                 {/* Cart */}
                 <motion.button
                   whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="relative p-3 rounded-2xl hover:bg-white/20 transition-all duration-300"
                   onClick={() => navigate("/cart")}
+                  className="p-3 rounded-2xl hover:bg-white/20"
                 >
-                  <ShoppingCart className="h-5 w-5 text-gray-800" />
-                  {/* {user && cartCount > 0 && (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      whileHover={{ scale: 1.1 }}
-                      className="absolute -top-1 -right-1 h-5 w-5 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs rounded-full flex items-center justify-center font-bold"
-                    >
-                      {cartCount}
-                    </motion.span>
-                  )} */}
+                  <ShoppingCart className="h-5 w-5" />
                 </motion.button>
 
-                {/* Auth Buttons */}
+                {/* Auth */}
                 {!user ? (
                   <>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="hidden md:block px-6 py-2 text-gray-800 hover:text-red-600 font-medium transition-all duration-300"
+                      className="hidden md:block px-6 py-2 text-gray-800 hover:text-red-600"
                       onClick={() => navigate("/login")}
                     >
                       Login
                     </motion.button>
 
                     <motion.button
-                      whileHover={{
-                        scale: 1.05,
-                        boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
-                      }}
-                      whileTap={{ scale: 0.95 }}
-                      className="px-6 py-3 rounded-2xl bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 text-white font-bold shadow-lg transition-all duration-300"
+                      whileHover={{ scale: 1.05 }}
+                      className="px-6 py-3 rounded-2xl bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 text-white font-bold"
                       onClick={() => navigate("/register")}
                     >
                       Sign Up
@@ -264,44 +182,28 @@ const Navbar = () => {
                   </>
                 ) : (
                   <motion.button
-                    whileHover={{
-                      scale: 1.05,
-                      boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
-                    }}
-                    whileTap={{ scale: 0.95 }}
-                    className="px-6 py-3 rounded-2xl bg-red-500 text-white font-bold shadow-lg transition-all duration-300"
+                    whileHover={{ scale: 1.05 }}
+                    className="px-6 py-3 rounded-2xl bg-red-500 text-white font-bold"
                     onClick={async () => {
                       await logout();
-                      navigate("/login"); // redirect after logout
+                      navigate("/login");
                     }}
                   >
                     Logout
                   </motion.button>
                 )}
 
-                {/* Mobile Menu Button */}
+                {/* Mobile Menu Toggle */}
                 <motion.button
                   whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="lg:hidden p-2 rounded-xl hover:bg-white/20 transition-all duration-300 mobile-menu-container"
-                  
+                  className="lg:hidden p-2 rounded-xl hover:bg-white/20 mobile-menu-container"
                 >
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={isMobileMenuOpen ? "close" : "menu"}
-                      initial={{ rotate: -90, opacity: 0 }}
-                      animate={{ rotate: 0, opacity: 1 }}
-                      exit={{ rotate: 90, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {isMobileMenuOpen ? (
-                        <X className="h-6 w-6" />
-                      ) : (
-                        <MenuIcon className="h-6 w-6" />
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
+                  {isMobileMenuOpen ? (
+                    <X className="h-6 w-6" />
+                  ) : (
+                    <MenuIcon className="h-6 w-6" />
+                  )}
                 </motion.button>
               </div>
             </div>
@@ -310,57 +212,51 @@ const Navbar = () => {
             <AnimatePresence>
               {isMobileMenuOpen && (
                 <motion.div
-                  variants={mobileMenuVariants}
                   initial="closed"
                   animate="open"
                   exit="closed"
+                  variants={mobileMenuVariants}
                   className="lg:hidden overflow-hidden mobile-menu-container"
                 >
-                  <div className="mt-4 py-4 border-t border-white/20">
+                  <div className="mt-4 py-4">
+
                     {navItems.map((item, index) => (
                       <motion.button
-                        key={item.label}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className={`flex items-center justify-between w-full text-left py-3 px-4 rounded-xl transition-all duration-300 hover:bg-white/10 ${
-                          item.active
-                            ? "text-red-600 bg-white/5"
-                            : "text-gray-800 hover:text-red-600"
-                        }`}
+                        key={index}
+                        whileHover={{ x: 5 }}
+                        className="w-full text-left py-3 px-4 rounded-xl hover:bg-white/10 text-gray-800"
                         onClick={() => {
                           item.onClick();
-                          setIsMobileMenuOpen(false); // close menu after navigation
+                          setIsMobileMenuOpen(false);
                         }}
                       >
-                        <span>{item.label}</span>
-                        {item.badge && (
-                          <span className="px-2 py-0.5 text-xs bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full">
-                            {item.badge}
-                          </span>
-                        )}
+                        {item.label}
                       </motion.button>
                     ))}
 
-                    {/* Mobile Actions */}
+                    {/* ADDITIONAL MOBILE LINKS */}
                     <div className="mt-4 pt-4 border-t border-white/20 space-y-3">
-                      <button className="flex items-center gap-3 w-full py-3 px-4 text-gray-800 hover:text-red-600 hover:bg-white/10 rounded-xl transition-all duration-300">
-                        <Search className="h-5 w-5" />
-                        Search Food
-                      </button>
-                      <button className="flex items-center gap-3 w-full py-3 px-4 text-gray-800 hover:text-red-600 hover:bg-white/10 rounded-xl transition-all duration-300"
-                      onClick={() => {
-                        navigate("/address"); 
-                      }}>
-                        <MapPin className="h-5 w-5" />
-                        Change Location
-                      </button>
-                      <button className="flex items-center gap-3 w-full py-3 px-4 text-gray-800 hover:text-red-600 hover:bg-white/10 rounded-xl transition-all duration-300"
-                      onClick={() => {
-                        navigate("/profile"); 
-                      }}>
+
+                      <button
+                        className="flex items-center gap-3 py-3 px-4 w-full text-gray-800 hover:text-red-600 hover:bg-white/10 rounded-xl"
+                        onClick={() => {
+                          navigate("/profile");
+                          setIsMobileMenuOpen(false);
+                        }}
+                      >
                         <User className="h-5 w-5" />
                         My Account
+                      </button>
+
+                      <button
+                        className="flex items-center gap-3 py-3 px-4 w-full text-gray-800 hover:text-red-600 hover:bg-white/10 rounded-xl"
+                        onClick={() => {
+                          setIsMapOpen(true);
+                          setIsMobileMenuOpen(false);
+                        }}
+                      >
+                        <MapPin className="h-5 w-5" />
+                        Track Order (Map)
                       </button>
                     </div>
                   </div>
@@ -371,7 +267,42 @@ const Navbar = () => {
         </div>
       </motion.nav>
 
-      {/* Search Overlay */}
+      {/* MAP MODAL */}
+      <AnimatePresence>
+        {isMapOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center"
+            onClick={() => setIsMapOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.8 }}
+              className="bg-white/20 backdrop-blur-xl rounded-3xl shadow-2xl p-4 w-[90%] max-w-3xl h-[70%]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-2xl font-bold text-gray-800">Track Your Order</h2>
+                <button
+                  onClick={() => setIsMapOpen(false)}
+                  className="p-2 rounded-xl hover:bg-white/20"
+                >
+                  <X className="h-6 w-6 text-gray-700" />
+                </button>
+              </div>
+
+              <div className="w-full h-full rounded-2xl overflow-hidden">
+                <FoodioMap />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* SEARCH OVERLAY */}
       <AnimatePresence>
         {isSearchOpen && (
           <motion.div
@@ -393,11 +324,11 @@ const Navbar = () => {
                   <div className="flex items-center">
                     <input
                       type="text"
-                      placeholder="Search restaurants, dishes, or cuisines..."
-                      className="flex-1 px-6 py-4 bg-transparent text-gray-800 placeholder-gray-500 focus:outline-none text-lg"
+                      placeholder="Search restaurants, dishes, cuisines..."
+                      className="flex-1 px-6 py-4 bg-transparent text-gray-800 placeholder-gray-500 text-lg focus:outline-none"
                       autoFocus
                     />
-                    <button className="px-6 py-4 rounded-2xl bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold hover:shadow-lg transition-all duration-300">
+                    <button className="px-6 py-4 rounded-2xl bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold">
                       <Search className="h-5 w-5" />
                     </button>
                   </div>
