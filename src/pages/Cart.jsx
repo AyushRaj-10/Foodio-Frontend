@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState , useContext } from "react";
 import { Star, ShoppingCart, Trash2, RefreshCw, Sparkles, ChefHat } from "lucide-react";
 import { useCart } from '../Context/CartContenxt';
+import { AppContext } from "../Context/AppContext";
 
 const Cart = () => {
   const { cart, removeFromCart, fetchCart, getCart, addToCart } = useCart();
   const [totalCost, setTotalCost] = useState(0);
+  const { user } = useContext(AppContext);
 
   useEffect(() => {
     fetchCart();
@@ -31,9 +33,11 @@ const Cart = () => {
   const finalAmount = totalCost + tax + deliveryFee;
 
   const handler = async () => {
-    await getCart(user.id);
+    if (!user?._id) return;
+    await getCart(user._id);
     await fetchCart();
   };
+  
 
   const handleAdd = async (food) => {
     await addToCart(food);

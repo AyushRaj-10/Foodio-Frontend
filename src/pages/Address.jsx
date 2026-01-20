@@ -1,11 +1,11 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { MapPin, Phone, Home, Building2, Mail, Check, ArrowLeft } from 'lucide-react';
 import { AppContext } from '../Context/AppContext';
-
-// Mock AppContext - replace with your actual context import
+import { useNavigate } from 'react-router-dom';
 
 const Address = () => {
-  const { user, saveAddress, loading } = useContext(AppContext);
+  const { user, saveAddress, updateAddress, deleteAddress, loading, addressInfo, addresses } = useContext(AppContext);
+  const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
     phone: "",
@@ -18,19 +18,18 @@ const Address = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errors, setErrors] = useState({});
-
-  // Mock navigation functions - replace with actual router navigation
-  const navigate = (path) => {
-    console.log(`Navigating to: ${path}`);
-    // In real app: use useNavigate() from react-router-dom
-  };
+  const [editingId, setEditingId] = useState(null);
 
   // Redirect if user is not logged in
-  React.useEffect(() => {
+  useEffect(() => {
     if (!loading && !user) {
       navigate('/login');
     }
-  }, [user, loading]);
+  }, [user, loading, navigate]);
+
+  useEffect(() => {
+    addressInfo();
+  }, []);
 
   // Show loading while checking auth
   if (loading) {
@@ -118,8 +117,18 @@ const Address = () => {
     setIsSubmitting(true);
     
     try {
-      await saveAddress(formData);
-      setIsSuccess(true);
+      let res;
+      if (editingId) {
+        res = await updateAddress(editingId, formData);
+      } else {
+        res = await saveAddress(formData);
+      }
+      if (res?.success === false) {
+        setErrors({ submit: res?.message || "Failed to save address." });
+      } else {
+        setIsSuccess(true);
+        await addressInfo();
+      }
       
       // Reset form after successful submission
       setTimeout(() => {
@@ -131,8 +140,9 @@ const Address = () => {
           state: "",
           postalCode: ""
         });
+        setEditingId(null);
         // Navigate back to home or previous page
-        navigate('/');
+        navigate('/dashboard');
       }, 2000);
       
     } catch (error) {
@@ -165,7 +175,9 @@ const Address = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-500 rounded-full mb-4">
             <MapPin className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Delivery Address</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            {editingId ? "Edit Address" : "Delivery Address"}
+          </h1>
           <p className="text-gray-600">Help us deliver your delicious food to the right place</p>
         </div>
 
@@ -328,6 +340,59 @@ const Address = () => {
           <p className="text-sm text-gray-500">
             🍕 Your information is secure and used only for delivery purposes
           </p>
+        </div>
+
+        {/* Existing addresses */}
+        <div className="mt-10 bg-white rounded-2xl shadow-xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-800">Saved Addresses</h2>
+            <span className="text-sm text-gray-500">{addresses?.length || 0} saved</span>
+          </div>
+          {(!addresses || addresses.length === 0) && (
+            <p className="text-sm text-gray-500">No addresses yet.</p>
+          )}
+          <div className="space-y-3 max-h-80 overflow-auto pr-1">
+            {(addresses || []).map((addr) => (
+              <div
+                key={addr._id}
+                className="p-4 border border-gray-200 rounded-xl flex items-start justify-between gap-3"
+              >
+                <div className="text-sm text-gray-700 space-y-1">
+                  <p className="font-semibold">{addr.label || "Address"}</p>
+                  <p>{addr.address}</p>
+                  <p>{addr.city}, {addr.state} {addr.postalCode}</p>
+                  {addr.phone && <p className="text-gray-500 text-xs">Ph: {addr.phone}</p>}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => {
+                      setEditingId(addr._id);
+                      setFormData({
+                        phone: addr.phone || "",
+                        address: addr.address || "",
+                        city: addr.city || "",
+                        state: addr.state || "",
+                        postalCode: addr.postalCode || ""
+                      });
+                    }}
+                    className="px-3 py-1 rounded-lg bg-orange-100 text-orange-700 hover:bg-orange-200 text-sm"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm("Delete this address?")) return;
+                      await deleteAddress(addr._id);
+                      await addressInfo();
+                    }}
+                    className="px-3 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 text-sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

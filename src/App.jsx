@@ -5,11 +5,12 @@ import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
 import Login from './pages/Login'
 import Register from './pages/Register'
-import Otp from './pages/Otp'
+import Otp from './pages/otp'
 import Cart from './pages/Cart'
 import Address from './pages/Address'
 import Menu from './pages/Menu'
 import Offer from './pages/Offer'
+import Delete from './pages/delete'
 
 
 const App = () => {
@@ -25,6 +26,7 @@ const App = () => {
       <Route path='/address' element={<Address />} />
       <Route path='/menu' element={<Menu/>} />
       <Route path='/offer' element={<Offer/>} />
+      <Route path='/delete' element={<Delete/>} />
     </Routes>
   )
 }

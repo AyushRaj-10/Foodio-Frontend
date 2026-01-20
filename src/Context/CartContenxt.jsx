@@ -8,54 +8,52 @@ const CartContext = createContext();
 export const CartProvider = ({ children }) => {
   const { user } = useContext(AppContext);
   const [cart, setCart] = useState([]);
+  const userId = user?._id || user?.id;
 
   // Fetch cart from backend
   const fetchCart = async () => {
+    if (!userId) return;
+  
     try {
-      const res = await axios.get(`${url}/cart/${user.id}`);
+      const res = await axios.get(`${url}/cart/${userId}`);
       if (res.data.success) setCart(res.data.cartItems);
       else setCart([]);
     } catch (err) {
       console.error("Error fetching cart:", err);
     }
   };
+  
 
   useEffect(() => {
     if (user?._id) fetchCart();
   }, [user]);
 
-  // Add item to cart
   const addToCart = async (food, quantity = 1) => {
+    if (!food?._id || !userId) {
+      console.log("Blocked addToCart", { food, user });
+      return;
+    }
+    
+  
     try {
-      // Check if item is already in cart
-      const existingItem = cart.find((item) => {
-        const itemFoodId =
-          typeof item.food === "string" ? item.food : item.food._id;
-        return itemFoodId === food._id;
+      console.log("ADD TO CART CLICKED", {
+        userId: user._id,
+        foodId: food._id,
       });
-
-      console.log(existingItem);
-
-      if (existingItem) {
-        await axios.put(`${url}/cart`, {
-          user: user.id,
-          food: food._id,
-          quantity: existingItem.quantity + quantity,
-        });
-      } else {
-        await axios.post(`${url}/cart`, {
-          user: user.id,
-          food: food._id,
-          quantity,
-        });
-      }
-      console.log(food);
-      // Refresh local cart state
+  
+      await axios.post(`${url}/cart`, {
+        user: userId,
+        food: food._id,
+        quantity,
+      });
+  
       await fetchCart();
     } catch (err) {
-      console.error("Error adding to cart:", err);
+      console.error("Error adding to cart:", err.response?.data || err);
     }
   };
+  
+  
 
   const removeFromCart = async (foodId) => {
     try {
@@ -69,14 +67,14 @@ export const CartProvider = ({ children }) => {
       if (item.quantity > 1) {
         // Decrease quantity by 1
         await axios.put(`${url}/cart`, {
-          user: user.id,
+          user: userId,
           food: foodId,
           quantity: item.quantity - 1,
         });
       } else {
         // Remove the item completely
         await axios.delete(`${url}/cart`, {
-          data: { user: user.id, food: foodId },
+          data: { user: userId, food: foodId },
         });
       }
   

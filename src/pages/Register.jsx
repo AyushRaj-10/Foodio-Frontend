@@ -20,17 +20,18 @@ const Register = () => {
   };
 
   // handle register function
+
   const handleRegister = async (e) => {
     e.preventDefault();
-
+  
     if (formData.password !== formData.confirmPassword) {
       alert("Passwords do not match!");
       return;
     }
-
+  
     try {
-      await register(formData.name, formData.email, formData.password, formData.phone);
-      navigate("/otp", {state : {email : email}}); // redirect after success
+      await register(formData.name, formData.email, formData.password);
+      navigate("/otp", { state: { email: formData.email } });
     } catch (err) {
       console.error("Registration failed:", err);
     }

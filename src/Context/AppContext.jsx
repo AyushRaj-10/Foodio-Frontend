@@ -6,6 +6,12 @@ export const AppContext = createContext();
 const url = import.meta.env.VITE_API_URL;
 
 export const AppProvider = ({ children }) => {
+  const normalizeUser = (rawUser) => {
+    if (!rawUser) return null;
+    const normalizedId = rawUser._id || rawUser.id || rawUser.userId;
+    return { ...rawUser, _id: normalizedId };
+  };
+
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("token") || null);
   const [loading, setLoading] = useState(false);
@@ -32,7 +38,7 @@ export const AppProvider = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      const data  = await axios.post(`${url}/login`, { email, password }, {
+      const { data }  = await axios.post(`${url}/login`, { email, password }, {
         headers: { "Content-Type": "application/json" },
         withCredentials: true
       });
@@ -40,9 +46,10 @@ export const AppProvider = ({ children }) => {
       console.log("✅ Login API response:", data);
 
       if (data.user) {
-        console.log("📌 Setting user from login response:", data.user);
-        setUser(data.user);
-        localStorage.setItem("user", JSON.stringify(data.user));
+        const normalized = normalizeUser(data.user);
+        console.log("📌 Setting user from login response:", normalized);
+        setUser(normalized);
+        localStorage.setItem("user", JSON.stringify(normalized));
       } else {
         console.log("⚠️ No user in login response, likely OTP step");
         setUser({ email });
@@ -67,7 +74,7 @@ export const AppProvider = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      const data  = await axios.post(`${url}/register`, { name, email, password }, {
+      const { data }  = await axios.post(`${url}/register`, { name, email, password }, {
         headers: { "Content-Type": "application/json" },
         withCredentials: true
       });
@@ -75,9 +82,10 @@ export const AppProvider = ({ children }) => {
       console.log("✅ Register API response:", data);
 
       if (data.user) {
-        console.log("📌 Setting user from register response:", data.user);
-        setUser(data.user);
-        localStorage.setItem("user", JSON.stringify(data.user));
+        const normalized = normalizeUser(data.user);
+        console.log("📌 Setting user from register response:", normalized);
+        setUser(normalized);
+        localStorage.setItem("user", JSON.stringify(normalized));
       }
 
       return data;
@@ -100,7 +108,7 @@ export const AppProvider = ({ children }) => {
 
     if (storedUser) {
       console.log("📦 Found user in localStorage:", storedUser);
-      setUser(JSON.parse(storedUser));
+      setUser(normalizeUser(JSON.parse(storedUser)));
     }
 
     if (storedToken) {
@@ -130,11 +138,12 @@ export const AppProvider = ({ children }) => {
         console.log("📌 Storing token from OTP verification:", response.data.token);
         storeToken(response.data.token);
       }
-  
+
       if (response.data.user) {
-        console.log("📌 Setting user from OTP verification:", response.data.user);
-        setUser(response.data.user);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+        const normalized = normalizeUser(response.data.user);
+        console.log("📌 Setting user from OTP verification:", normalized);
+        setUser(normalized);
+        localStorage.setItem("user", JSON.stringify(normalized));
       }
   
       // ✅ return only the body
@@ -158,7 +167,7 @@ export const AppProvider = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      const data  = await axios.post(`${url}/logout`);
+      const { data }  = await axios.post(`${url}/logout`);
       console.log("✅ Logout API response:", data);
 
       setUser(null);
@@ -191,7 +200,7 @@ const saveAddress = async (addressData) => {
 
     console.log("📦 Current token:", token);
 
-    const  data  = await axios.post(
+    const  response  = await axios.post(
       `${url}/addresses`,
       addressData, // ✅ pass the whole form data object
       {
@@ -202,14 +211,18 @@ const saveAddress = async (addressData) => {
       }
     );
 
-    console.log("✅ Save address API response:", data);
+    console.log("✅ Save address API response:", response.data);
+    // Refresh cached addresses
+    if (response.data?.success) {
+      await addressInfo();
+    }
 
-    return data;
+    return response.data;
   } catch (err) {
     const msg = err.response?.data?.message || "❌ Failed to save address";
     setError(msg);
     console.error("❌ saveAddress error:", err.response?.data || err.message);
-    throw err;
+    return { success: false, message: msg };
   } finally {
     setLoading(false);
     console.log("⏹ saveAddress() finished");
@@ -227,15 +240,16 @@ const saveAddress = async (addressData) => {
         return { loggedIn: false };
       }
 
-      const data  = await axios.get(`${url}/check`, {
+      const { data }  = await axios.get(`${url}/check`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       console.log("✅ verifyAuth API response:", data);
 
       if (data.loggedIn) {
-        console.log("📌 User is authenticated:", data.user);
-        setUser(data.user);
+        const normalized = normalizeUser(data.user);
+        console.log("📌 User is authenticated:", normalized);
+        setUser(normalized);
       } else {
         console.warn("⚠️ User not logged in");
         setUser(null);
@@ -248,6 +262,73 @@ const saveAddress = async (addressData) => {
       setUser(null);
       storeToken(null);
       return { loggedIn: false };
+    }
+  };
+
+  const updateAddress = async (id, addressData) => {
+    console.log("➡️ updateAddress() called with:", id, addressData);
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!token) {
+        console.warn("⚠️ Cannot update address: no token");
+        throw new Error("No authentication token found");
+      }
+
+      const response = await axios.put(
+        `${url}/addresses/${id}`,
+        addressData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("✅ updateAddress API response:", response.data);
+      await addressInfo();
+      return response.data;
+    } catch (err) {
+      const msg = err.response?.data?.message || "❌ Failed to update address";
+      setError(msg);
+      console.error("❌ updateAddress error:", err.response?.data || err.message);
+      return { success: false, message: msg };
+    } finally {
+      setLoading(false);
+      console.log("⏹ updateAddress() finished");
+    }
+  };
+
+  const deleteAddress = async (id) => {
+    console.log("➡️ deleteAddress() called with:", id);
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!token) {
+        console.warn("⚠️ Cannot delete address: no token");
+        throw new Error("No authentication token found");
+      }
+
+      const response = await axios.delete(`${url}/addresses/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log("✅ deleteAddress API response:", response.data);
+      await addressInfo();
+      return response.data;
+    } catch (err) {
+      const msg = err.response?.data?.message || "❌ Failed to delete address";
+      setError(msg);
+      console.error("❌ deleteAddress error:", err.response?.data || err.message);
+      return { success: false, message: msg };
+    } finally {
+      setLoading(false);
+      console.log("⏹ deleteAddress() finished");
     }
   };
 
@@ -265,7 +346,7 @@ const saveAddress = async (addressData) => {
   
       console.log("📦 Current token:", token);
   
-      const  data  = await axios.get(`${url}/getme`, {
+      const  { data }  = await axios.get(`${url}/getme`, {
         headers: { 
           Authorization: `Bearer ${token}`,
         },
@@ -340,6 +421,8 @@ const saveAddress = async (addressData) => {
         verifyOtp,
         logout,
         saveAddress,
+        updateAddress,
+        deleteAddress,
         verifyAuth,
         userInfo,
         addressInfo
